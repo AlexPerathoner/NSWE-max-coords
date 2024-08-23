@@ -19,19 +19,26 @@ app.get('/api/points', (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to read data' });
     }
-    res.json(JSON.parse(data));
+    res.json(JSON.parse(data)[req.query.user]);
   });
 });
 
 // Update points data
 app.post('/api/points', (req, res) => {
   const updatedData = req.body;
-
-  fs.writeFile(dataFilePath, JSON.stringify(updatedData, null, 2), (err) => {
+  fs.readFile(dataFilePath, (err, data) => {
     if (err) {
-      return res.status(500).json({ error: 'Failed to write data' });
+      return res.status(500).json({ error: 'Failed to read data' });
     }
-    res.json({ success: true });
+    const existingData = JSON.parse(data);
+    const user = req.query.user;
+    existingData[user] = updatedData['updatedPoints'];
+    fs.writeFile(dataFilePath, JSON.stringify(existingData, null, 2), (err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to write data' });
+      }
+      res.json({ success: true });
+    });
   });
 });
 

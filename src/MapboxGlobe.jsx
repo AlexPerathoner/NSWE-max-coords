@@ -15,7 +15,7 @@ const MapboxGlobe = () => {
   useEffect(() => {
     if (mapContainerRef.current) {
       // Mapbox access token
-      mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
+      mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_TOKEN;
 
       // Initialize the map
       const mapInstance = new mapboxgl.Map({
@@ -28,7 +28,8 @@ const MapboxGlobe = () => {
 
       mapInstance.on('load', () => {
         setMap(mapInstance);
-        fetchPointsData(); // Load points data on map load
+        fetchPointsData('user1'); // Load points data on map load // todo doesnt work 
+        
       });
 
       // Right-click to add points
@@ -58,25 +59,27 @@ const MapboxGlobe = () => {
     }
   }, []);
 
-  const fetchPointsData = async () => {
+  const fetchPointsData = async (user) => {
     try {
-      const response = await fetch('http://localhost:5002/api/points');
+      const response = await fetch('http://localhost:5002/api/points?user=' + user);
       const data = await response.json();
-      setPoints(data['user1'] || []);
-      updateMapData(map, data['user1'] || []);
+      console.log(data, map)
+      setPoints(data || []);
+      updateMapData(map, data || []); // map is null
+
     } catch (error) {
       console.error('Error fetching points data:', error);
     }
   };
 
-  const updatePointsDataOnServer = async (updatedPoints) => {
+  const updatePointsDataOnServer = async (updatedPoints, user) => {
     try {
-      await fetch('http://localhost:5002/api/points', {
+      await fetch('http://localhost:5002/api/points?user=' + user, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ user1: updatedPoints }),
+        body: JSON.stringify({ updatedPoints }),
       });
     } catch (error) {
       console.error('Error updating points data:', error);
@@ -89,13 +92,24 @@ const MapboxGlobe = () => {
       return;
     }
 
-    // Calculate bounds
-    const lats = updatedPoints.map(point => point[1]);
-    const lngs = updatedPoints.map(point => point[0]);
-    const bounds = [
-      [Math.min(...lngs), Math.min(...lats)],
-      [Math.max(...lngs), Math.max(...lats)],
-    ];
+    // Calculate bounds if points exist, otherwise use a default bound
+    let bounds;
+    if (updatedPoints.length > 0) {
+      const lats = updatedPoints.map(point => point[1]);
+      const lngs = updatedPoints.map(point => point[0]);
+      bounds = [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+      ];
+    } else {
+      // Use a default bounding box if no points exist
+      bounds = [ // todo should be current user location
+        [0, 0],
+        [0, 0],
+      ];
+    }
+
+    console.log('Bounds:', bounds);
 
     // Update GeoJSON source for points
     if (mapInstance.getSource('points')) {
@@ -216,7 +230,7 @@ const MapboxGlobe = () => {
     if (updatedPoints) {
       setPoints(updatedPoints);
       updateMapData(map, updatedPoints);
-      await updatePointsDataOnServer(updatedPoints);
+      await updatePointsDataOnServer(updatedPoints, 'user1');
     }
 
     setModalIsOpen(false);
