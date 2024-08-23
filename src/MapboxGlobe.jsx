@@ -2,12 +2,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import pointsData from './coordinates.json';
-import CustomModal from './Modal'; // Import the modal component
+import CustomModal from './Modal';
 
 const MapboxGlobe = () => {
   const mapContainerRef = useRef(null);
-  const [points, setPoints] = useState(pointsData['user1'] || []);
+  const [points, setPoints] = useState([]);
   const [map, setMap] = useState(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [currentAction, setCurrentAction] = useState(null);
@@ -29,7 +28,7 @@ const MapboxGlobe = () => {
 
       mapInstance.on('load', () => {
         setMap(mapInstance);
-        updateMapData(mapInstance);
+        fetchPointsData(); // Load points data on map load
       });
 
       // Right-click to add points
@@ -43,7 +42,7 @@ const MapboxGlobe = () => {
       mapInstance.on('click', (e) => {
         if (mapInstance) {
           const features = mapInstance.queryRenderedFeatures(e.point, {
-            layers: ['points-layer'] // Ensure this matches your layer ID
+            layers: ['points-layer']
           });
           if (features.length > 0) {
             const featureId = features[0].properties.id;
@@ -54,11 +53,35 @@ const MapboxGlobe = () => {
         }
       });
 
-
       // Clean up on component unmount
       return () => mapInstance.remove();
     }
   }, []);
+
+  const fetchPointsData = async () => {
+    try {
+      const response = await fetch('http://localhost:5002/api/points');
+      const data = await response.json();
+      setPoints(data['user1'] || []);
+      updateMapData(map, data['user1'] || []);
+    } catch (error) {
+      console.error('Error fetching points data:', error);
+    }
+  };
+
+  const updatePointsDataOnServer = async (updatedPoints) => {
+    try {
+      await fetch('http://localhost:5002/api/points', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user1: updatedPoints }),
+      });
+    } catch (error) {
+      console.error('Error updating points data:', error);
+    }
+  };
 
   const updateMapData = (mapInstance, updatedPoints = points) => {
     if (!Array.isArray(updatedPoints)) {
@@ -69,7 +92,6 @@ const MapboxGlobe = () => {
     // Calculate bounds
     const lats = updatedPoints.map(point => point[1]);
     const lngs = updatedPoints.map(point => point[0]);
-    
     const bounds = [
       [Math.min(...lngs), Math.min(...lats)],
       [Math.max(...lngs), Math.max(...lats)],
@@ -182,20 +204,21 @@ const MapboxGlobe = () => {
     mapInstance.fitBounds(mapBounds, { padding: 50 });
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    let updatedPoints;
+
     if (currentAction === 'add' && selectedPoint) {
-      setPoints((prevPoints) => {
-        const updatedPoints = [...prevPoints, selectedPoint];
-        updateMapData(map, updatedPoints);
-        return updatedPoints;
-      });
+      updatedPoints = [...points, selectedPoint];
     } else if (currentAction === 'delete' && selectedPoint !== null) {
-      setPoints((prevPoints) => {
-        const updatedPoints = prevPoints.filter((_, index) => index !== selectedPoint);
-        updateMapData(map, updatedPoints);
-        return updatedPoints;
-      });
+      updatedPoints = points.filter((_, index) => index !== selectedPoint);
     }
+
+    if (updatedPoints) {
+      setPoints(updatedPoints);
+      updateMapData(map, updatedPoints);
+      await updatePointsDataOnServer(updatedPoints);
+    }
+
     setModalIsOpen(false);
   };
 

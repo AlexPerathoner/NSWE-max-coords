@@ -1,0 +1,40 @@
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const cors = require('cors');
+
+const app = express();
+const port = 5002;
+
+// Middleware
+app.use(express.json());
+app.use(cors());
+
+// Path to the coordinates.json file
+const dataFilePath = path.join(__dirname, 'coordinates.json');
+
+// Get points data
+app.get('/api/points', (req, res) => {
+  fs.readFile(dataFilePath, (err, data) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to read data' });
+    }
+    res.json(JSON.parse(data));
+  });
+});
+
+// Update points data
+app.post('/api/points', (req, res) => {
+  const updatedData = req.body;
+
+  fs.writeFile(dataFilePath, JSON.stringify(updatedData, null, 2), (err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to write data' });
+    }
+    res.json({ success: true });
+  });
+});
+
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
