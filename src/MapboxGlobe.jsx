@@ -28,8 +28,7 @@ const MapboxGlobe = () => {
 
       mapInstance.on('load', () => {
         setMap(mapInstance);
-        fetchPointsData('user1'); // Load points data on map load // todo doesnt work 
-        
+        fetchPointsData(mapInstance, 'user1'); // Pass mapInstance to fetchPointsData
       });
 
       // Right-click to add points
@@ -59,13 +58,15 @@ const MapboxGlobe = () => {
     }
   }, []);
 
-  const fetchPointsData = async (user) => {
+  const fetchPointsData = async (mapInstance, user) => {
+    if (!mapInstance) return;
+
     try {
       const response = await fetch('http://localhost:5002/api/points?user=' + user);
       const data = await response.json();
-      console.log(data, map)
+
       setPoints(data || []);
-      updateMapData(map, data || []); // map is null
+      updateMapData(mapInstance, data || []); // map is null
 
     } catch (error) {
       console.error('Error fetching points data:', error);
@@ -87,6 +88,8 @@ const MapboxGlobe = () => {
   };
 
   const updateMapData = (mapInstance, updatedPoints = points) => {
+    if (!mapInstance) return; // Ensure mapInstance is not null
+
     if (!Array.isArray(updatedPoints)) {
       console.error('updatedPoints is not an array:', updatedPoints);
       return;
@@ -108,8 +111,6 @@ const MapboxGlobe = () => {
         [0, 0],
       ];
     }
-
-    console.log('Bounds:', bounds);
 
     // Update GeoJSON source for points
     if (mapInstance.getSource('points')) {
@@ -226,10 +227,12 @@ const MapboxGlobe = () => {
     } else if (currentAction === 'delete' && selectedPoint !== null) {
       updatedPoints = points.filter((_, index) => index !== selectedPoint);
     }
-
+    
     if (updatedPoints) {
       setPoints(updatedPoints);
-      updateMapData(map, updatedPoints);
+      if (map) {
+        updateMapData(map, updatedPoints); // Ensure map is initialized
+      }
       await updatePointsDataOnServer(updatedPoints, 'user1');
     }
 
