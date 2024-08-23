@@ -11,6 +11,20 @@ const MapboxGlobe = () => {
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [currentAction, setCurrentAction] = useState(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
+  const [boundsInfo, setBoundsInfo] = useState({
+    maxEast: null,
+    maxWest: null,
+    maxNorth: null,
+    maxSouth: null,
+    area: null,
+    percOfTotal: null,
+  });
+  const [boundaryPoints, setBoundaryPoints] = useState({
+    maxEast: null,
+    maxWest: null,
+    maxNorth: null,
+    maxSouth: null
+  });
 
   useEffect(() => {
     if (mapContainerRef.current) {
@@ -66,7 +80,7 @@ const MapboxGlobe = () => {
       const data = await response.json();
 
       setPoints(data || []);
-      updateMapData(mapInstance, data || []); // map is null
+      updateMapData(mapInstance, data || []);
 
     } catch (error) {
       console.error('Error fetching points data:', error);
@@ -97,13 +111,30 @@ const MapboxGlobe = () => {
 
     // Calculate bounds if points exist, otherwise use a default bound
     let bounds;
+    let boundaryPoints = {
+      maxEast: null,
+      maxWest: null,
+      maxNorth: null,
+      maxSouth: null
+    };
     if (updatedPoints.length > 0) {
       const lats = updatedPoints.map(point => point[1]);
       const lngs = updatedPoints.map(point => point[0]);
+      // Find boundary points
+      const maxEast = Math.max(...lngs);
+      const maxWest = Math.min(...lngs);
+      const maxNorth = Math.max(...lats);
+      const maxSouth = Math.min(...lats);
       bounds = [
         [Math.min(...lngs), Math.min(...lats)],
         [Math.max(...lngs), Math.max(...lats)],
       ];
+      // find the boundary points. save the index of the point in the array
+      boundaryPoints.maxEast = updatedPoints.findIndex(point => point[0] === maxEast);
+      boundaryPoints.maxWest = updatedPoints.findIndex(point => point[0] === maxWest);
+      boundaryPoints.maxNorth = updatedPoints.findIndex(point => point[1] === maxNorth);
+      boundaryPoints.maxSouth = updatedPoints.findIndex(point => point[1] === maxSouth);
+      setBoundaryPoints(boundaryPoints);
     } else {
       // Use a default bounding box if no points exist
       bounds = [ // todo should be current user location
@@ -152,6 +183,24 @@ const MapboxGlobe = () => {
         paint: {
           'circle-radius': 6,
           'circle-color': '#ff0000',
+        },
+      });
+
+      // Add text layer for labels
+      mapInstance.addLayer({
+        id: 'labels-layer',
+        type: 'symbol',
+        source: 'points',
+        layout: {
+          'symbol-placement': 'point',
+          'text-field': '{id}', // Use index as label
+          'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+          'text-size': 12,
+          'text-offset': [0, -1.7],
+          'text-anchor': 'top',
+        },
+        paint: {
+          'text-color': '#fff',
         },
       });
     }
@@ -210,6 +259,18 @@ const MapboxGlobe = () => {
         },
       });
     }
+    const areaSqDegrees = Math.abs((bounds[1][0] - bounds[0][0]) * (bounds[1][1] - bounds[0][1]));
+    let areaSqKm = (areaSqDegrees * 111.32 * 111.32).toFixed(2);
+    const perc = areaSqDegrees > 0 ? ((areaSqDegrees / 360)).toFixed(2) : 0; // todo fix formula
+    areaSqKm = areaSqKm.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    setBoundsInfo({
+      maxEast: bounds[1][0],
+      maxWest: bounds[0][0],
+      maxNorth: bounds[1][1],
+      maxSouth: bounds[0][1],
+      area: areaSqKm,
+      percOfTotal: perc,
+    });
 
     // Adjust the map view to fit the bounds
     const mapBounds = [
@@ -242,11 +303,26 @@ const MapboxGlobe = () => {
   return (
     <div>
       <div ref={mapContainerRef} style={{ width: '100vw', height: '100vh' }} />
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        backgroundColor: 'white',
+        padding: '10px',
+        borderRadius: '5px',
+        boxShadow: '0 0 10px rgba(0,0,0,0.3)'
+      }}>
+        <div><strong>Max East:</strong> {boundsInfo.maxEast} (Point {boundaryPoints.maxEast})</div>
+        <div><strong>Max West:</strong> {boundsInfo.maxWest} (Point {boundaryPoints.maxWest})</div>
+        <div><strong>Max North:</strong> {boundsInfo.maxNorth} (Point {boundaryPoints.maxNorth})</div>
+        <div><strong>Max South:</strong> {boundsInfo.maxSouth} (Point {boundaryPoints.maxSouth})</div>
+        <div><strong>Area:</strong> {boundsInfo.area} km^2 ({boundsInfo.percOfTotal}%)</div>
+      </div>
       <CustomModal
         isOpen={modalIsOpen}
         onRequestClose={() => setModalIsOpen(false)}
         onConfirm={handleConfirm}
-        message={`Do you want to ${currentAction === 'add' ? 'add' : 'delete'} this point?`}
+        message={`Do you want to ${currentAction === 'add' ? 'add a point here?' : 'delete point ' + selectedPoint + '?'}`}
       />
     </div>
   );
