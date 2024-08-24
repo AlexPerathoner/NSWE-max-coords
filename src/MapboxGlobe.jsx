@@ -1,4 +1,3 @@
-// src/MapboxGlobe.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -25,8 +24,25 @@ const MapboxGlobe = () => {
     maxNorth: null,
     maxSouth: null
   });
+  const [username, setUsername] = useState('');
 
   useEffect(() => {
+    // Retrieve username from localStorage
+    const storedUsername = localStorage.getItem('username');
+    if (!storedUsername) {
+      // Prompt for username if not already stored
+      const inputUsername = prompt("Enter your username:");
+      if (inputUsername) {
+        localStorage.setItem('username', inputUsername);
+        setUsername(inputUsername);
+      } else {
+        alert("Username is required!");
+        return;
+      }
+    } else {
+      setUsername(storedUsername);
+    }
+    
     if (mapContainerRef.current) {
       // Mapbox access token
       mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_TOKEN;
@@ -42,7 +58,7 @@ const MapboxGlobe = () => {
 
       mapInstance.on('load', () => {
         setMap(mapInstance);
-        fetchPointsData(mapInstance, 'user1'); // Pass mapInstance to fetchPointsData
+        fetchPointsData(mapInstance, storedUsername); // Pass mapInstance and username to fetchPointsData
       });
 
       // Right-click to add points
@@ -76,12 +92,11 @@ const MapboxGlobe = () => {
     if (!mapInstance) return;
 
     try {
-      const response = await fetch('http://localhost:5002/api/points?user=' + user);
+      const response = await fetch(`http://localhost:5002/api/points?user=${user}`);
       const data = await response.json();
 
       setPoints(data || []);
       updateMapData(mapInstance, data || []);
-
     } catch (error) {
       console.error('Error fetching points data:', error);
     }
@@ -89,7 +104,7 @@ const MapboxGlobe = () => {
 
   const updatePointsDataOnServer = async (updatedPoints, user) => {
     try {
-      await fetch('http://localhost:5002/api/points?user=' + user, {
+      await fetch(`http://localhost:5002/api/points?user=${user}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +152,7 @@ const MapboxGlobe = () => {
       setBoundaryPoints(boundaryPoints);
     } else {
       // Use a default bounding box if no points exist
-      bounds = [ // todo should be current user location
+      bounds = [
         [0, 0],
         [0, 0],
       ];
@@ -294,14 +309,20 @@ const MapboxGlobe = () => {
       if (map) {
         updateMapData(map, updatedPoints); // Ensure map is initialized
       }
-      await updatePointsDataOnServer(updatedPoints, 'user1');
+      await updatePointsDataOnServer(updatedPoints, username);
     }
 
     setModalIsOpen(false);
   };
 
+  const handleLogout = () => {
+    // Clear username and reload the page
+    localStorage.removeItem('username');
+    window.location.reload();
+  };
+
   return (
-    <div>
+    <div style={{ position: 'relative', height: '100vh' }}>
       <div ref={mapContainerRef} style={{ width: '100vw', height: '100vh' }} />
       <div style={{
         position: 'absolute',
@@ -317,6 +338,19 @@ const MapboxGlobe = () => {
         <div><strong>Max North:</strong> {boundsInfo.maxNorth} (Point {boundaryPoints.maxNorth})</div>
         <div><strong>Max South:</strong> {boundsInfo.maxSouth} (Point {boundaryPoints.maxSouth})</div>
         <div><strong>Area:</strong> {boundsInfo.area} km^2 ({boundsInfo.percOfTotal}%)</div>
+      </div>
+      <div 
+        style={{
+          position: 'absolute',
+          top: 10,
+          right: 10,
+          cursor: 'pointer',
+          fontSize: '24px',
+          color: 'red'
+        }}
+        onClick={handleLogout}
+      >
+        &#10005; {/* Cross icon for logout */}
       </div>
       <CustomModal
         isOpen={modalIsOpen}
