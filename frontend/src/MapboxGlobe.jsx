@@ -25,11 +25,8 @@ const MapboxGlobe = () => {
     maxSouth: null
   });
   const [username, setUsername] = useState('');
-  const [backendUrl, setBackendUrl] = useState('');
 
   useEffect(() => {
-    setBackendUrl(process.env.REACT_APP_BACKEND_URL);
-    console.debug('backendUrl:', process.env.REACT_APP_BACKEND_URL, backendUrl); // needed. if missing backendUrl will be empty
     // Retrieve username from localStorage
     const storedUsername = localStorage.getItem('username');
     if (!storedUsername) {
@@ -90,13 +87,13 @@ const MapboxGlobe = () => {
       // Clean up on component unmount
       return () => mapInstance.remove();
     }
-  }, [backendUrl]);
+  }, []);
 
   const fetchPointsData = async (mapInstance, user) => {
     if (!mapInstance) return;
     let response;
     try {
-      response = await fetch(`${backendUrl}/api/points?user=${user}` , { timeout: 2000 });
+      response = await fetch(`/api/points?user=${user}` , { timeout: 2000 });
     } catch (error) {
       alert('Error fetching points data. Please try again later');
       handleLogout();
@@ -114,7 +111,7 @@ const MapboxGlobe = () => {
 
   const updatePointsDataOnServer = async (updatedPoints, user) => {
     try {
-      await fetch(`${backendUrl}/api/points?user=${user}`, {
+      await fetch(`/api/points?user=${user}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

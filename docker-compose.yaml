@@ -1,0 +1,22 @@
+services:
+  nswe-backend:
+    build: ./backend
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+
+  nswe-frontend:
+    build: ./frontend
+    ports:
+      - "3002:3000"
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - nswe-backend
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
