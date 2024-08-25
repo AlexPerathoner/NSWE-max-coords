@@ -6,11 +6,7 @@
 
 ## How to start
 
-### Docker
 `docker compose up` in root.
-
-### Manually
-`npm start` in both backend and frontend folders.
 
 App accessible on `localhost:3002`.
 
