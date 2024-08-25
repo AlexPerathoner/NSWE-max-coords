@@ -6,7 +6,7 @@ services:
     volumes:
       - ./data:/app/data
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
     restart: unless-stopped
 
   nswe-frontend:
@@ -18,5 +18,5 @@ services:
     depends_on:
       - nswe-backend
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
     restart: unless-stopped
