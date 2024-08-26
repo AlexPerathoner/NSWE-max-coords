@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(cors());
 
 // Path to the coordinates.json file
-const dataFilePath = path.join(__dirname, 'coordinates.json');
+const dataFilePath = path.join(__dirname, 'data', 'coordinates.json');
 
 // Get points data
 app.get('/api/points', (req, res) => {

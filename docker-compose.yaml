@@ -1,18 +1,22 @@
 services:
   nswe-backend:
     build: ./backend
-    ports:
-      - "5002:5002"
+    container_name: nswe-backend
+    expose:
+      - 5002
     volumes:
       - ./data:/app/data
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+    networks:
+      - default
 
   nswe-frontend:
     build: ./frontend
-    ports:
-      - "3002:3000"
+    container_name: nswe-frontend
+    expose:
+      - 3000
     env_file:
       - ./frontend/.env
     depends_on:
@@ -20,3 +24,13 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+    networks:
+      - nginxproxymanager_default
+      - default
+
+networks:
+  nginxproxymanager_default:
+    external: true
+  default:
+    driver: bridge
+    name: nswe_net
