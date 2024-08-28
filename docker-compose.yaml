@@ -3,14 +3,14 @@ services:
     build: ./backend
     container_name: nswe-backend
     expose:
-      - 5002
+      - 5000
     volumes:
-      - ./data:/app/data
+      - ./data:/data
     environment:
       - NODE_ENV=production
     restart: unless-stopped
     networks:
-      - default
+      - internal
 
   nswe-frontend:
     build: ./frontend
@@ -25,12 +25,25 @@ services:
       - NODE_ENV=production
     restart: unless-stopped
     networks:
+      - internal
       - nginxproxymanager_default
-      - default
+
+  nswe-nginx-proxy:
+    image: nginx:latest
+    container_name: nswe-nginx-proxy
+    ports:
+      - 3000:80
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - nswe-frontend
+    networks:
+      - internal
+      - nginxproxymanager_default
 
 networks:
   nginxproxymanager_default:
     external: true
-  default:
+  internal:
     driver: bridge
     name: nswe_net

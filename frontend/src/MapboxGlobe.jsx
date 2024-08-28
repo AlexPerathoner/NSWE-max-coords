@@ -39,9 +39,8 @@ const MapboxGlobe = () => {
         alert("Username is required!");
         return;
       }
-    } else {
-      setUsername(storedUsername);
     }
+    setUsername(storedUsername);
     
     if (mapContainerRef.current) {
       // Mapbox access token

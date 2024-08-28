@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:14-alpine
 
 COPY package*.json ./
 RUN npm install
@@ -10,5 +10,5 @@ RUN npm install -g serve
 
 EXPOSE 3000
 
-# CMD serve -s build
-CMD npm start
+CMD serve -s build
+# CMD npm start
