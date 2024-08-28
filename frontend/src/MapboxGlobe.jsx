@@ -28,13 +28,14 @@ const MapboxGlobe = () => {
 
   useEffect(() => {
     // Retrieve username from localStorage
-    const storedUsername = localStorage.getItem('username');
-    if (!storedUsername) {
+    let storedUsername = localStorage.getItem('username');
+    if (!storedUsername || storedUsername === 'null') {
       // Prompt for username if not already stored
       const inputUsername = prompt("Enter your username:");
       if (inputUsername) {
         localStorage.setItem('username', inputUsername);
         setUsername(inputUsername);
+        storedUsername = inputUsername;
       } else {
         alert("Username is required!");
         return;
