@@ -8,6 +8,7 @@ const MapboxGlobe = () => {
   const [points, setPoints] = useState([]);
   const [map, setMap] = useState(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [configModalIsOpen, setConfigModalIsOpen] = useState(false);
   const [currentAction, setCurrentAction] = useState(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [boundsInfo, setBoundsInfo] = useState({
@@ -25,6 +26,7 @@ const MapboxGlobe = () => {
     maxSouth: null
   });
   const [username, setUsername] = useState('');
+  const [showLines, setShowLines] = useState(true);
 
   const removeIntersectingLines = (mapInstance, point) => {
     console.log("removing lines for point: ", point);
@@ -71,7 +73,8 @@ const MapboxGlobe = () => {
       },
       'paint': {
         'line-color': '#ff0000',
-        'line-width': 2
+        'line-width': 2,
+        'visibility': 'none'
       }
     });
 
@@ -88,8 +91,18 @@ const MapboxGlobe = () => {
       },
       'paint': {
         'line-color': '#0000ff',
-        'line-width': 2
+        'line-width': 2,
+        'visibility': 'none'
       }
+    });
+  };
+
+  const toggleLinesVisibilityGrid = () => {
+    console.log("toggling lines visibility");
+    setShowLines(!showLines);
+    points.forEach((_, index) => {
+      map.setLayoutProperty(`north-south-line-${index}`, 'visibility', !showLines ? 'visible' : 'none');
+      map.setLayoutProperty(`west-east-line-${index}`, 'visibility', !showLines ? 'visible' : 'none');
     });
   };
 
@@ -452,6 +465,43 @@ const MapboxGlobe = () => {
         onConfirm={() => handleConfirm(map)}
         message={`Do you want to ${currentAction === 'add' ? 'add a point here?' : 'delete point ' + selectedPoint + '?'}`}
       />
+      <button
+        style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          zIndex: 1,
+          backgroundColor: 'white',
+          padding: '10px',
+          borderRadius: '5px',
+          cursor: 'pointer'
+        }}
+        onClick={() => setConfigModalIsOpen(!configModalIsOpen)}
+      >
+        Config
+      </button>
+      {configModalIsOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50px',
+            left: '10px',
+            zIndex: 1,
+            backgroundColor: 'white',
+            padding: '10px',
+            borderRadius: '5px'
+          }}
+        >
+          <label>
+            <input
+              type="checkbox"
+              checked={showLines}
+              onChange={toggleLinesVisibilityGrid}
+            />
+            Show Intersecting Lines
+          </label>
+        </div>
+      )}
     </div>
   );
 };
