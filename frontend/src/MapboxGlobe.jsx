@@ -26,6 +26,73 @@ const MapboxGlobe = () => {
   });
   const [username, setUsername] = useState('');
 
+  const removeIntersectingLines = (mapInstance, point) => {
+    console.log("removing lines for point: ", point);
+    mapInstance.removeLayer(`north-south-line-${point}`);
+    mapInstance.removeLayer(`west-east-line-${point}`);
+    mapInstance.removeSource(`north-south-line-${point}`);
+    mapInstance.removeSource(`west-east-line-${point}`);
+  };
+
+  const addIntersectingLines = (mapInstance, point, lng, lat) => {
+    console.log("adding lines for point: ", point);
+    const northSouthLine = {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'LineString',
+        'coordinates': [
+          [lng, -90],
+          [lng, 90]
+        ]
+      }
+    };
+
+    const westEastLine = {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'LineString',
+        'coordinates': [
+          [-180, lat],
+          [180, lat]
+        ]
+      }
+    };
+
+    mapInstance.addLayer({
+      'id': `north-south-line-${point}`,
+      'type': 'line',
+      'source': {
+        'type': 'geojson',
+        'data': northSouthLine
+      },
+      'layout': {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      'paint': {
+        'line-color': '#ff0000',
+        'line-width': 2
+      }
+    });
+
+    mapInstance.addLayer({
+      'id': `west-east-line-${point}`,
+      'type': 'line',
+      'source': {
+        'type': 'geojson',
+        'data': westEastLine
+      },
+      'layout': {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      'paint': {
+        'line-color': '#0000ff',
+        'line-width': 2
+      }
+    });
+  };
+
   useEffect(() => {
     // Retrieve username from localStorage
     let storedUsername = localStorage.getItem('username');
@@ -53,7 +120,7 @@ const MapboxGlobe = () => {
         style: 'mapbox://styles/mapbox/satellite-streets-v11',
         zoom: 4,
         center: [52.0, 55.0],
-        projection: 'globe',
+        projection: 'globe', // options: winkelTripel, globe, equirectangular, albers
       });
 
       mapInstance.on('load', () => {
@@ -229,6 +296,12 @@ const MapboxGlobe = () => {
         },
       });
     }
+    updatedPoints.forEach((point, index) => {
+      // only if the layer does not exist already
+      if (!mapInstance.getLayer(`north-south-line-${index}`) && !mapInstance.getLayer(`west-east-line-${index}`)) {
+        addIntersectingLines(mapInstance, index, point[0], point[1]);
+      }
+    });
 
     // Update GeoJSON source for bounds
     if (mapInstance.getSource('bounds')) {
@@ -306,13 +379,19 @@ const MapboxGlobe = () => {
     mapInstance.fitBounds(mapBounds, { padding: 50 });
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (mapInstance) => {
     let updatedPoints;
 
     if (currentAction === 'add' && selectedPoint) {
       updatedPoints = [...points, selectedPoint];
+      // only if layer does not exist already
+      let index = updatedPoints.length - 1;
+      if (!mapInstance.getLayer(`north-south-line-${index}`) && !mapInstance.getLayer(`west-east-line-${index}`)) {
+        addIntersectingLines(mapInstance, index, selectedPoint[0], selectedPoint[1]);
+      }
     } else if (currentAction === 'delete' && selectedPoint !== null) {
       updatedPoints = points.filter((_, index) => index !== selectedPoint);
+      removeIntersectingLines(mapInstance, updatedPoints.length);
     }
     
     if (updatedPoints) {
@@ -370,7 +449,7 @@ const MapboxGlobe = () => {
       <CustomModal
         isOpen={modalIsOpen}
         onRequestClose={() => setModalIsOpen(false)}
-        onConfirm={handleConfirm}
+        onConfirm={() => handleConfirm(map)}
         message={`Do you want to ${currentAction === 'add' ? 'add a point here?' : 'delete point ' + selectedPoint + '?'}`}
       />
     </div>

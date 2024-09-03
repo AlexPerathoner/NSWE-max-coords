@@ -15,6 +15,7 @@ const dataFilePath = path.join(__dirname, 'data', 'coordinates.json');
 
 // Get points data
 app.get('/api/points', (req, res) => {
+  console.log('GET /api/points');
   fs.readFile(dataFilePath, (err, data) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to read data' });
@@ -25,6 +26,7 @@ app.get('/api/points', (req, res) => {
 
 // Update points data
 app.post('/api/points', (req, res) => {
+  console.log('POST /api/points');
   const updatedData = req.body;
   fs.readFile(dataFilePath, (err, data) => {
     if (err) {
