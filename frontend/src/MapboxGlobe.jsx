@@ -95,6 +95,14 @@ const MapboxGlobe = () => {
         'visibility': 'none'
       }
     });
+    setVisibilityGrid(mapInstance, 'none');
+  };
+
+  const setVisibilityGrid = (mapInstance, visibility) => {
+    points.forEach((_, index) => {
+      mapInstance.setLayoutProperty(`north-south-line-${index}`, 'visibility', visibility);
+      mapInstance.setLayoutProperty(`west-east-line-${index}`, 'visibility', visibility);
+    });
   };
 
   const toggleLinesVisibilityGrid = () => {
@@ -104,6 +112,59 @@ const MapboxGlobe = () => {
       map.setLayoutProperty(`north-south-line-${index}`, 'visibility', !showLines ? 'visible' : 'none');
       map.setLayoutProperty(`west-east-line-${index}`, 'visibility', !showLines ? 'visible' : 'none');
     });
+  };
+
+  const updatePolygon = (mapInstance) => {
+    const outmostPoints = findOutmostPoints(points);
+    if (mapInstance.getLayer('polygon-layer')) {
+      mapInstance.removeLayer('polygon-layer');
+      mapInstance.removeSource('polygon');
+    }
+    addPolygonLayer(mapInstance, outmostPoints);
+  };
+
+  const addPolygonLayer = (mapInstance, outmostPoints) => {
+    const geojson = {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Polygon',
+        'coordinates': [outmostPoints]
+      }
+    };
+
+    // Add the GeoJSON source to the map
+    map.addSource('polygon', {
+      'type': 'geojson',
+      'data': geojson
+    });
+
+    // Add a new layer to the map using this GeoJSON source
+    map.addLayer({
+      'id': 'polygon-layer',
+      'type': 'fill',
+      'source': 'polygon',
+      'layout': {},
+      'paint': {
+        'fill-color': '#088',
+        'fill-opacity': 0.8
+      }
+    });
+  };
+
+  const findOutmostPoints = (points) => {
+    const lats = points.map(point => point[1]);
+    const lngs = points.map(point => point[0]);
+    const maxEast = Math.max(...lngs);
+    const maxWest = Math.min(...lngs);
+    const maxNorth = Math.max(...lats);
+    const maxSouth = Math.min(...lats);
+    return [
+      [maxEast, maxNorth],
+      [maxEast, maxSouth],
+      [maxWest, maxSouth],
+      [maxWest, maxNorth],
+      [maxEast, maxNorth]
+    ];
   };
 
   useEffect(() => {
@@ -390,6 +451,7 @@ const MapboxGlobe = () => {
       [bounds[1][0], bounds[1][1]],
     ];
     mapInstance.fitBounds(mapBounds, { padding: 50 });
+    updatePolygon(mapInstance);
   };
 
   const handleConfirm = async (mapInstance) => {
