@@ -7,9 +7,7 @@
 ## How to start
 
 1. Create `frontend/.env` file with `REACT_APP_MAPBOX_TOKEN=<mapbox-token>` inside.
-1. Run `npm i; npm start` in backend directory.
-1. Run `npm i; npm local-start` in frontend directory.
-1. App is accessible on `localhost:3000`.
+1. `docker compose up`
 
 ## How to use
 
